@@ -51,7 +51,8 @@ Search.py:
                 oldest: 2019-03-20T12:18:25+0000 snapshot: 77821b62-e319-4ab7-b5a1-ad0032871322
                 newest: 2019-03-20T12:18:25+0000 snapshot: a54eacdd-760f-4114-b834-6c2384412af6 
 
-restore.py
+Restore.py:
+
         Usage:
             restore.py <cdm_ip> <vm|fileset> <object_name> <snapshot_id> <filepaths>
         Example: (Virtual machine)
