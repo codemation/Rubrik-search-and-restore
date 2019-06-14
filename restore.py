@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 """
 Created for assisting with CLI Restoration
@@ -38,6 +38,7 @@ def jsonify_path(toConvert):
     return files
 
 def get_curl_response(curl):
+    print(curl)
     import os, json
     os.system('%s | python -m json.tool > response.json'%(curl))
     with open('response.json', 'r') as f:
@@ -45,15 +46,11 @@ def get_curl_response(curl):
         return response
     
 def fileset(object_name, snapshotId, paths):
-    """
-
-    """
     files = jsonify_path(paths)
     pathString = "--data-binary '{"+ '"sourceDirs": %s }'%(files) + "'"
     url = " 'https://%s/api/internal/fileset/snapshot/%s/download_files'"%(host, snapshotId)
     header = "-H 'Content-Type: application/json;charset=UTF-8' -H 'Accept: application/json, text/plain, */*'"
     curl = "curl -s -X POST %s %s %s %s --insecure"%(auth, header, pathString, url)
-    print(curl)
     before_curl_time = datetime.datetime.utcnow()
     response = get_curl_response(curl)
     if not 'id' in response:
@@ -70,7 +67,6 @@ def vm(object_name, snapshotId, paths):
     files = jsonify_path(paths)
     url = " 'https://%s/api/internal/vmware/vm/snapshot/%s/download_files'"%(host, snapshotId)
     curl = "curl -s -X POST %s %s -d '{%s:%s}'"%(auth, headers,'"paths"', files) + url + ' --insecure'
-    print(curl)
     before_curl_time = datetime.datetime.utcnow()
     response = get_curl_response(curl)
     if not 'id' in response:
@@ -87,8 +83,6 @@ def get_download(object_name, jobInstanceId, before_curl_time):
     after_date = '%s-%s-%sT%s%%3A%s'%(before_curl_time.year, before_curl_time.month, before_curl_time.day, before_curl_time.hour, before_curl_time.minute)
     url1 = "'https://%s/api/internal/event_series?event_type=Recovery&object_name=%s&after_date=%s'"%(host, object_name,after_date)
     curl1 = "curl -s -X GET %s %s "%(auth,headers) + url1 + ' --insecure'
-    print (curl1)
-
     events = get_curl_response(curl1)
     eventSeriesId = None
     for event in events["data"]:
@@ -131,7 +125,7 @@ def get_download(object_name, jobInstanceId, before_curl_time):
     restorePath = ev_dl['downloadInfo']['path']
     url_dload = "'https://%s/%s'"%(host, restorePath)
     curl_dload = "curl -s %s %s -o %s --insecure"%(auth, url_dload, restoreName)
-    print ("Use the following command to download the specified files: \n %s"%(curl_dload))
+    print ("Use the following command to download the specified files: Note: This link is only valid for the next 24 hours\n %s"%(curl_dload))
     return curl_dload
 def usage():
     print("""

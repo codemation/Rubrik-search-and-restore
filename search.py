@@ -15,6 +15,7 @@ except:
 auth = '-H "Authorization: Basic $(cat %s | base64)"'%(auth_path) if auth_path is not None else None
 
 def get_curl_response(curl):
+    print(curl)
     import os, json
     os.system('%s | python -m json.tool > response.json'%(curl))
     with open('response.json', 'r') as f:
@@ -45,7 +46,6 @@ def fileset(name, host, search, **kw):
     header = "--header 'Accept: application/json'"
     url = "'https://%s/api/v1/fileset?name=%s&host_name=%s'"%(cdm,name,host)
     curl = "curl -s -X GET %s %s %s --insecure"%(auth, header, url)
-    print (curl)
     response = get_curl_response(curl)
     fileSetId = None
     if response['total'] > 1:
@@ -64,7 +64,6 @@ def fileset(name, host, search, **kw):
     print("Using %s -- %s"%(fileSetId['name'], fileSetId['id']))
     url = "'https://%s/api/v1/fileset/%s/search?path=%s'"%(cdm, quote(fileSetId['id'], safe=''), quote(search, safe=''))
     curl = "curl -s -X GET %s %s %s --insecure"%(auth, header, url)
-    print(curl)
     response = get_curl_response(curl)
     if response['total'] > 0:
         list_files(response['data'], kw)
@@ -78,7 +77,6 @@ def vm(name, search, **kw):
     header = "--header 'Accept: application/json'"
     url = "'https://%s/api/v1/vmware/vm?name=%s'"%(cdm,name)
     curl = "curl -s -X GET %s %s %s --insecure"%(auth,header, url)
-    print(curl)
     response = get_curl_response(curl)
     if not 'total' in response:
         try:
@@ -99,7 +97,6 @@ def vm(name, search, **kw):
         vmid=response['data'][0]['id']
         url = "'https://%s/api/v1/vmware/vm/%s/search?path=%s'"%(cdm,vmid, search)
         curl = "curl -s -X GET %s %s %s --insecure"%(auth, header, url)
-        print(curl)
         response = get_curl_response(curl)
         if response['total'] > 0:
             list_files(response['data'], kw)
