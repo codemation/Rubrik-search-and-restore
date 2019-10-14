@@ -35,6 +35,11 @@ def jsonify_path(toConvert):
                 files = files + ','
     files = files + ']'
     print("Files: %s"%(files))
+    if '\\' in files:
+        print('\\ in files')
+        print(files.split('\\'))
+        escapeFiles = '\\\\'.join(files.split('\\'))
+        return escapeFiles
     return files
 
 def get_curl_response(curl):
@@ -44,7 +49,24 @@ def get_curl_response(curl):
     with open('response.json', 'r') as f:
         response = json.load(f)
         return response
-    
+def volume_group(hostname, snapshotId, paths):
+    files = jsonify_path(paths)
+    pathString = "--data-binary '{"+ '"paths": %s }'%(files) + "'"
+    url = " 'https://%s/api/internal/volume_group/snapshot/%s/download_files'"%(host, snapshotId)
+    header = "-H 'Content-Type: application/json;charset=UTF-8' -H 'Accept: application/json, text/plain, */*'"
+    curl = "curl -s -X POST %s %s %s %s --insecure"%(auth, header, pathString, url)
+    before_curl_time = datetime.datetime.utcnow()
+    response = get_curl_response(curl)
+    if not 'id' in response:
+        try:
+            print(response['message'])
+        except:
+            print(response)
+        return
+    jobInstanceId = response['id']
+    get_download(hostname, jobInstanceId, before_curl_time)
+
+
 def fileset(object_name, snapshotId, paths):
     files = jsonify_path(paths)
     pathString = "--data-binary '{"+ '"sourceDirs": %s }'%(files) + "'"
@@ -83,6 +105,7 @@ def get_download(object_name, jobInstanceId, before_curl_time):
     after_date = '%s-%s-%sT%s%%3A%s'%(before_curl_time.year, before_curl_time.month, before_curl_time.day, before_curl_time.hour, before_curl_time.minute)
     url1 = "'https://%s/api/internal/event_series?event_type=Recovery&object_name=%s&after_date=%s'"%(host, object_name,after_date)
     curl1 = "curl -s -X GET %s %s "%(auth,headers) + url1 + ' --insecure'
+    print(curl1)
     events = get_curl_response(curl1)
     eventSeriesId = None
     for event in events["data"]:
@@ -164,6 +187,8 @@ def main():
         vm(objName, snapId, filepaths)
     elif objType == 'fileset':
         fileset(objName, snapId, filepaths)
+    elif objType == 'host':
+        volume_group(objName, snapId, filepaths)
     else:
         usage()
 if __name__ == "__main__":

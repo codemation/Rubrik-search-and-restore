@@ -24,8 +24,14 @@ def get_curl_response(curl):
 
 def list_files(response, kw):
     print("Files found with search path:")
+    #print(response)
     for file in response:
-        print(file['path'])
+        if 'path' in file:
+            print(file['path'])
+        else:
+            print("File:  ", file)
+            pint("Oops something bad happened here")
+            break
         if not 'files' in kw:
             print("versions:")
             oldest_v, oldest_s = file['fileVersions'][0]['lastModified'], file['fileVersions'][0]['snapshotId']
@@ -38,6 +44,27 @@ def list_files(response, kw):
                     print("date: %s snapshot: %s"%(fv['lastModified'], fv['snapshotId']))
                 print("\n")
         
+def hostGroup(host, search, **kw):
+    header = "--header 'Accept: application/json'"
+    url = "'https://%s/api/v1/host?hostname=%s'"%(cdm,host)
+    curl = "curl -s -X GET %s %s %s --insecure"%(auth, header, url)
+    response = get_curl_response(curl)
+    #print(response)
+    if response['total'] > 1:
+        print("Found more than 1 host with name: %s"%(host))
+    for hId in response['data']:
+        hostId = hId['id']
+        break
+    print(hostId)
+    header = "--header 'Accept: application/json'"
+    url = "'https://%s/api/v1/host/%s/search?path=%s'"%(cdm, quote(hostId, safe=''), quote(search, safe=''))
+    curl = "curl -s -X GET %s %s %s --insecure"%(auth, header, url)
+    response = get_curl_response(curl)
+    if response['total'] > 0:
+        list_files(response['data'], kw)
+    else:
+        print("No files found matching provided using search string: %s in for host: %s"%(search, host))
+
 
 def fileset(name, host, search, **kw):
     """
@@ -48,6 +75,10 @@ def fileset(name, host, search, **kw):
     curl = "curl -s -X GET %s %s %s --insecure"%(auth, header, url)
     response = get_curl_response(curl)
     fileSetId = None
+    if not 'total' in response:
+        print("response indicated an issue")
+        print(response)
+        return
     if response['total'] > 1:
         print("Found more than 1 fileSet with name: %s & host: %s"%(name, host))
         for fId in response['data']:
@@ -130,7 +161,20 @@ def main():
             print("Missing name")
         usage()
         return
-    if objtype == 'fileset':
+    if objtype == 'host':
+        try:
+            host, searchString = args[3], args[4]
+        except:
+            if len(args) < 5:
+                if len(args) < 4:
+                    print("Missing field: Host")
+                print(args)
+                print("Missing search string")
+            usage()
+            return
+        hostGroup(host, searchString)
+
+    elif objtype == 'fileset':
         try:
             host, searchString = args[4], args[5]
         except:
@@ -174,6 +218,8 @@ def main():
         usage()
 def usage():
     print("""
+        Usage: search.py <cdm_ip> <host> <hostname> <searchString> 
+
         Usage: search.py <cdm_ip> <vm> <name> <searchString> [--files|--expand]
 
         Usage: search.py <cdm_ip> <fileset> <name> <host> <searchString> [--files|--expand]
