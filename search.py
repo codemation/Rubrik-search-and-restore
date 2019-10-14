@@ -170,6 +170,7 @@ def main():
         else:
             vm(name, searchString)
     else:
+        print("Unrecognized argument " + objtype + "\nExpected fileset|vm" )
         usage()
 def usage():
     print("""
