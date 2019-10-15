@@ -82,7 +82,7 @@ Search.py:
 Restore.py:
 
         Usage:
-            restore.py <cdm_ip> <vm|fileset> <object_name> <snapshot_id> <filepaths>
+            restore.py <cdm_ip> <vm|fileset|host> <object_name> <snapshot_id> <filepaths>
         Example: (Virtual machine)
             In:
                 python3 restore.py 10.35.36.165 vm jjamison-ubu16 7dd06b60-2af6-4d83-a807-1f6526ac0ced /home/rksupport/test/71.txt,/home/rksupport/data/31.txt

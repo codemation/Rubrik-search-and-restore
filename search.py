@@ -235,7 +235,7 @@ def main():
         else:
             vm(name, searchString)
     else:
-        print("Unrecognized argument " + objtype + "\nExpected fileset|vm" )
+        print("Unrecognized argument " + objtype + "\nExpected fileset|vm|host" )
         usage()
 def usage():
     print("""
