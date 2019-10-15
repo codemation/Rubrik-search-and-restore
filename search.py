@@ -14,17 +14,21 @@ except:
     pass
 auth = '-H "Authorization: Basic $(cat %s | base64)"'%(auth_path) if auth_path is not None else None
 
-def get_curl_response(curl):
-    print(curl)
+def log(obj, kw):
+    if 'debug' in kw:
+        print(obj)
+
+def get_curl_response(curl, kw):
+    log("Request: %s"%(curl), kw)
     import os, json
     os.system('%s | python -m json.tool > response.json'%(curl))
     with open('response.json', 'r') as f:
         response = json.load(f)
+        log("Response: %s"%(response), kw)
         return response
 
 def list_files(response, kw):
     print("Files found with search path:")
-    #print(response)
     for file in response:
         if 'path' in file:
             print(file['path'])
@@ -48,18 +52,16 @@ def hostGroup(host, search, **kw):
     header = "--header 'Accept: application/json'"
     url = "'https://%s/api/v1/host?hostname=%s'"%(cdm,host)
     curl = "curl -s -X GET %s %s %s --insecure"%(auth, header, url)
-    response = get_curl_response(curl)
-    #print(response)
+    response = get_curl_response(curl, kw)
     if response['total'] > 1:
         print("Found more than 1 host with name: %s"%(host))
     for hId in response['data']:
         hostId = hId['id']
         break
-    print(hostId)
     header = "--header 'Accept: application/json'"
     url = "'https://%s/api/v1/host/%s/search?path=%s'"%(cdm, quote(hostId, safe=''), quote(search, safe=''))
     curl = "curl -s -X GET %s %s %s --insecure"%(auth, header, url)
-    response = get_curl_response(curl)
+    response = get_curl_response(curl, kw)
     if response['total'] > 0:
         list_files(response['data'], kw)
     else:
@@ -73,7 +75,7 @@ def fileset(name, host, search, **kw):
     header = "--header 'Accept: application/json'"
     url = "'https://%s/api/v1/fileset?name=%s&host_name=%s'"%(cdm,name,host)
     curl = "curl -s -X GET %s %s %s --insecure"%(auth, header, url)
-    response = get_curl_response(curl)
+    response = get_curl_response(curl, kw)
     fileSetId = None
     if not 'total' in response:
         print("response indicated an issue")
@@ -95,7 +97,7 @@ def fileset(name, host, search, **kw):
     print("Using %s -- %s"%(fileSetId['name'], fileSetId['id']))
     url = "'https://%s/api/v1/fileset/%s/search?path=%s'"%(cdm, quote(fileSetId['id'], safe=''), quote(search, safe=''))
     curl = "curl -s -X GET %s %s %s --insecure"%(auth, header, url)
-    response = get_curl_response(curl)
+    response = get_curl_response(curl, kw)
     if response['total'] > 0:
         list_files(response['data'], kw)
     else:
@@ -108,31 +110,35 @@ def vm(name, search, **kw):
     header = "--header 'Accept: application/json'"
     url = "'https://%s/api/v1/vmware/vm?name=%s'"%(cdm,name)
     curl = "curl -s -X GET %s %s %s --insecure"%(auth,header, url)
-    response = get_curl_response(curl)
+    response = get_curl_response(curl, kw)
     if not 'total' in response:
         try:
             print(response['message'])
         except:
             print(response)
         return
+    ind = 0
     if int(response['total']) > 1:
-        print ("Multiple ID's found with the provided vmware name: %s"%(name))
-        for resp in response['data']:
-            print(response['data'][resp]['id'])
-            return
+        vmsFound = name + ' | '
+        for i, vm_config in enumerate(response['data']):
+            if vm_config['name'] == name:
+                ind = i
+            else:
+                vmsFound = vmsFound + vm_config['name'] + ' | '
+        print("Multiple VM's found matching provided vm name: %s"%(vmsFound))
+    if response['total'] == 0:
+        print("No vm id found with matching name: %s"%(name))
+        return
+     
+    print("Found vm id matching name: %s"%(name))
+    vmid=response['data'][ind]['id']
+    url = "'https://%s/api/v1/vmware/vm/%s/search?path=%s'"%(cdm,vmid, search)
+    curl = "curl -s -X GET %s %s %s --insecure"%(auth, header, url)
+    response = get_curl_response(curl, kw)
+    if response['total'] > 0:
+        list_files(response['data'], kw)
     else:
-        if response['total'] == 0:
-            print("No vm id found with matching name: %s"%(name))
-            return
-        print("Found vm id matching name: %s"%(name))
-        vmid=response['data'][0]['id']
-        url = "'https://%s/api/v1/vmware/vm/%s/search?path=%s'"%(cdm,vmid, search)
-        curl = "curl -s -X GET %s %s %s --insecure"%(auth, header, url)
-        response = get_curl_response(curl)
-        if response['total'] > 0:
-            list_files(response['data'], kw)
-        else:
-            print("Not files found matching search string: %s in vm: %s"%(search, name))
+        print("Not files found matching search string: %s in vm: %s"%(search, name))
 def main():
     if auth is None:
         print("""
@@ -170,9 +176,20 @@ def main():
                     print("Missing field: Host")
                 print(args)
                 print("Missing search string")
-            usage()
-            return
-        hostGroup(host, searchString)
+        if len(args) > 5:
+            kwArgs = args[5]
+            if kwArgs == '--expand':
+                hostGroup(host, searchString, expand=True)
+            elif kwArgs == '--files':
+                hostGroup(host, searchString, files=True)
+            elif kwArgs == '--debug':
+                hostGroup(name, searchString, debug=True)
+            else:
+                print("Unrecognized argument: %s"%(kwArgs))
+                usage()
+                return
+        else:
+            hostGroup(host, searchString)
 
     elif objtype == 'fileset':
         try:
@@ -190,6 +207,8 @@ def main():
                 fileset(name,host, searchString, expand=True)
             elif kwArgs == '--files':
                 fileset(name,host, searchString, files=True)
+            elif kwArgs == '--debug':
+                fileset(name, searchString, debug=True)
             else:
                 print("Unrecognized argument: %s"%(kwArgs))
                 usage()
@@ -208,6 +227,8 @@ def main():
                 vm(name, searchString, expand=True)
             elif kwArgs == '--files':
                 vm(name, searchString, files=True)
+            elif kwArgs == '--debug':
+                vm(name, searchString, debug=True)
             else:
                 print("Unrecognized argument: %s"%(kwArgs))
                 usage()
@@ -218,13 +239,15 @@ def main():
         usage()
 def usage():
     print("""
-        Usage: search.py <cdm_ip> <host> <hostname> <searchString> 
+        Usage: search.py <cdm_ip> <host> <hostname> <searchString> [--files|--expand]
 
         Usage: search.py <cdm_ip> <vm> <name> <searchString> [--files|--expand]
 
         Usage: search.py <cdm_ip> <fileset> <name> <host> <searchString> [--files|--expand]
 
         --files: view file names only 
+        --expand: view all files versions, instead of just oldest / newest
+        --debug: print curl commands to screen
     """)
 
 if __name__ == '__main__':
