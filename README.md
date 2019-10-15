@@ -1,5 +1,5 @@
 Purpose: 
-Provide a cli method of searching indexed files within virtual-machine & fileset snapshots. This information can then be applied 
+Provide a cli method of searching indexed files within virtual-machine, fileset, & volume-group snapshots. This information can then be applied 
 for generating a downloadable link for restoration / verifications purposes. 
 
 1. Create an credentials file, containing 'username|pw'. 
@@ -14,11 +14,16 @@ for generating a downloadable link for restoration / verifications purposes.
 
 Search.py:
 
+        Usage: search.py <cdm_ip> <host> <hostname> <searchString> [--files|--expand]
+
         Usage: search.py <cdm_ip> <vm> <name> <searchString> [--files|--expand]
 
         Usage: search.py <cdm_ip> <fileset> <name> <host> <searchString> [--files|--expand]
 
         --files: view file names only 
+        --expand: view all files versions, instead of just oldest / newest
+        --debug: print curl commands to screen
+
         Example: (virtual Machine)
             python3 search.py 10.35.36.165 vm jjamison-ubu16 /home/rksupport/data/
             Out:
@@ -49,7 +54,30 @@ Search.py:
                 /home/rksupport/data/25.txt
                 versions:
                 oldest: 2019-03-20T12:18:25+0000 snapshot: 77821b62-e319-4ab7-b5a1-ad0032871322
-                newest: 2019-03-20T12:18:25+0000 snapshot: a54eacdd-760f-4114-b834-6c2384412af6 
+                newest: 2019-03-20T12:18:25+0000 snapshot: a54eacdd-760f-4114-b834-6c2384412af6
+        Example: (Volume Group)
+            In:
+                python3 search.py 10.35.36.165 host 10.35.36.181 "F:\\test" --expand
+            Out:
+                Files found with search path:
+                F:\test
+                versions:
+                oldest: 2018-09-19T12:42:22+0000 snapshot: 0ebfa6f3-3809-425d-b762-f9aa61735613
+                newest: 2018-09-19T12:42:22+0000 snapshot: 6d5f33d5-3dca-47f7-ab3c-cda736ddbcc9 
+
+                Expanded Version List:
+                date: 2018-09-19T12:42:22+0000 snapshot: 0ebfa6f3-3809-425d-b762-f9aa61735613
+                date: 2018-09-19T12:42:22+0000 snapshot: 6d5f33d5-3dca-47f7-ab3c-cda736ddbcc9
+
+
+                F:\TestRestore\ProcessMonitor.zip
+                versions:
+                oldest: 2018-11-06T10:13:19+0000 snapshot: 0ebfa6f3-3809-425d-b762-f9aa61735613
+                newest: 2018-11-06T10:13:19+0000 snapshot: 6d5f33d5-3dca-47f7-ab3c-cda736ddbcc9 
+
+                Expanded Version List:
+                date: 2018-11-06T10:13:19+0000 snapshot: 0ebfa6f3-3809-425d-b762-f9aa61735613
+                date: 2018-11-06T10:13:19+0000 snapshot: 6d5f33d5-3dca-47f7-ab3c-cda736ddbcc9
 
 Restore.py:
 
@@ -69,3 +97,19 @@ Restore.py:
 
                 Use the following command to download the specified files: 
                 curl -s -H "Authorization: Basic $(cat ~/cdm_auth | base64)" 'https://10.35.36.165/download_dir/4Afql4qsPlVwkvnN5yei.zip' -o rksupport.zip --insecure
+        Example: (Volume Group)
+            In:
+                python3 restore.py 10.35.36.165 host 10.35.36.181 0ebfa6f3-3809-425d-b762-f9aa61735613 "F:\\test","F:\TestRestore\ProcessMonitor.zip"
+            Out:
+                Host is 10.35.36.165
+                Waiting for Download Link to be generated 33.33 % completed
+                Waiting for Download Link to be generated 33.33 % completed
+                Waiting for Download Link to be generated 33.33 % completed
+                Waiting for Download Link to be generated 33.33 % completed
+                Waiting for Download Link to be generated 33.33 % completed
+                Successfully Completed Generation of FileDownload
+                
+                Use the following command to download the specified files: Note: This link is only valid for the next 24 hours
+                curl -s -H "Authorization: Basic $(cat ~/cdm_auth | base64)" 'https://10.35.36.165/download_dir/t7cQqDnw7IgBh7FNKdl8.zip' -o Rubrik-Download-t7cQqDnw7IgBh7FNKdl8.zip --insecure
+
+
