@@ -179,7 +179,7 @@ def get_download(object_name, jobInstanceId, before_curl_time, kw):
     import json
     # Writes Job result to downloadpath.json to re-open
     with open('downloadpath.json','w') as ev_dl_json:
-        print(success)
+        log(success, kw)
         if 'eventInfo' in success: # 4.2
             ev_dl_json.write(success['eventInfo']) 
         else: # 5.X
