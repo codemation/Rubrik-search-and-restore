@@ -1,17 +1,38 @@
-#!/usr/bin/python3
+#!/usr/bin/env python
 
 """
 See README.MD
 """
 
 from urllib.parse import quote
+import os
 
+def get_auth_path():
+    try:
+        with open('auth.cfg', 'r') as auth:
+            auth_path = auth.readline().rstrip()
+            with open(auth_path, 'r') as testOpen:
+                pass
+            return auth_path
+    except: 
+        return None
+auth_path = get_auth_path()
 try:
-    with open('auth.cfg', 'r') as auth:
-        auth_path = auth.readline().rstrip()
+    if auth_path == None:
+        print("trying environment variables")
+        with open('temp.cfg', 'w') as auth:
+            user = os.environ['user'].rstrip()
+            pw = os.environ['password'].rstrip()
+            auth.write(f'{user}:{pw}')
+        with open('temp.cfg', 'r') as auth:
+            auth_path = os.path.realpath(auth.name)
+        with open('auth.cfg', 'w') as authcfg:
+            authcfg.write(auth_path)
+        auth_path=get_auth_path()
 except:
+    print("missing environment variables user|password")
     auth_path = None
-    pass
+
 auth = '-H "Authorization: Basic $(cat %s | base64)"'%(auth_path) if auth_path is not None else None
 
 def log(obj, kw):
