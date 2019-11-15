@@ -1,7 +1,18 @@
-Purpose: 
+# Purpose: 
 Provide a cli method of searching indexed files within virtual-machine, fileset, & volume-group snapshots. This information can then be applied 
 for generating a downloadable link for restoration / verifications purposes. 
 
+# Get started 
+
+## Docker 
+
+    docker container run -it -e user=<user> -e 'password=<pw>' joshjamison/rubrik-search-restore:latest /bin/bash
+
+## Git 
+
+    git clone https://github.com/codemation/Rubrik-search-and-restore.git
+
+# Usage 
 1. Create an credentials file, containing 'username|pw'. 
     Method: echo -n 'admin:abcd1234' > ~/special_cdm_auth
 
